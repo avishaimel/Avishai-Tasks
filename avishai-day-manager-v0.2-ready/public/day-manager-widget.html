@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>היום שלי</title>
+  <style>
+    :root{
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:#172033; background:#f5f7fb;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:16px;background:linear-gradient(180deg,#eef3ff 0,#f7f8fb 180px)}
+    .app{max-width:760px;margin:auto}
+    .hero{background:#14213d;color:#fff;border-radius:22px;padding:18px 20px;box-shadow:0 16px 40px rgba(20,33,61,.18)}
+    .hero-top,.toolbar,.task,.category-head{display:flex;align-items:center;gap:10px}
+    .hero-top{justify-content:space-between}
+    h1{font-size:24px;margin:0}
+    .sub{opacity:.75;margin-top:4px;font-size:13px}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+    .stat{background:rgba(255,255,255,.1);padding:10px;border-radius:14px}
+    .stat strong{display:block;font-size:19px}
+    .stat span{font-size:12px;opacity:.8}
+    .toolbar{margin:14px 0}
+    input,select,button{font:inherit}
+    .search,.quick{width:100%;border:1px solid #dbe1ec;border-radius:13px;padding:11px 13px;background:#fff}
+    button{border:0;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:650}
+    .primary{background:#14213d;color:#fff;white-space:nowrap}
+    .ghost{background:#edf1f8;color:#26324a}
+    .category{background:#fff;border:1px solid #e0e5ee;border-radius:18px;margin:10px 0;overflow:hidden;box-shadow:0 5px 18px rgba(31,41,55,.04)}
+    .category-head{padding:13px 15px;border-bottom:1px solid #edf0f5}
+    .category-head h2{margin:0;font-size:15px;flex:1}
+    .count{font-size:12px;color:#6b7280;background:#f1f4f8;border-radius:999px;padding:4px 8px}
+    .task{padding:12px 15px;border-bottom:1px solid #f0f2f6}
+    .task:last-child{border-bottom:0}
+    .check{width:21px;height:21px;accent-color:#14213d}
+    .task-main{flex:1;min-width:0}
+    .title{font-size:14px;font-weight:650}
+    .title.done{text-decoration:line-through;opacity:.5}
+    .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+    .pill{font-size:11px;border-radius:999px;padding:3px 7px;background:#edf1f7;color:#536076}
+    .high{background:#ffe8e8;color:#a03030}
+    .medium{background:#fff4d8;color:#8a6200}
+    .actions{display:flex;gap:5px}
+    .icon{padding:7px 9px;background:#f1f4f8;color:#3b465a}
+    .empty{padding:24px;text-align:center;color:#7a8497}
+    .footer{font-size:11px;color:#7a8497;text-align:center;margin:14px}
+    @media(max-width:560px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}.actions{display:none}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <section class="hero">
+    <div class="hero-top">
+      <div><h1>היום שלי</h1><div class="sub">משימות אישיות וסידורים</div></div>
+      <button class="ghost" id="showDone">הצג בוצעו</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><strong id="openCount">0</strong><span>פתוחות</span></div>
+      <div class="stat"><strong id="doneCount">0</strong><span>בוצעו</span></div>
+      <div class="stat"><strong id="categoryCount">0</strong><span>קטגוריות</span></div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <input class="quick" id="newTask" placeholder="הוסף משימה, למשל: להזמין אוכל לכלבים" />
+    <select id="newCategory" class="quick" style="max-width:145px">
+      <option>כללי</option><option>בית ותשלומים</option><option>כלבים</option>
+      <option>בריאות</option><option>רכב</option><option>קניות וסידורים</option>
+    </select>
+    <button class="primary" id="addTask">הוסף</button>
+  </div>
+  <input class="search" id="search" placeholder="חיפוש משימות..." />
+
+  <main id="content"></main>
+  <div class="footer">כל שינוי כאן מתעדכן באותו מאגר שבו משתמש הצ׳אט.</div>
+</div>
+
+<script>
+let tasks = [];
+let showDone = false;
+let seq = 0;
+const pending = new Map();
+
+function callTool(name, args) {
+  return new Promise((resolve, reject) => {
+    const id = ++seq;
+    pending.set(id, {resolve,reject});
+    window.parent.postMessage({
+      jsonrpc:"2.0", id, method:"tools/call",
+      params:{name, arguments:args}
+    }, "*");
+  });
+}
+window.addEventListener("message", (event) => {
+  if (event.source !== window.parent) return;
+  const msg = event.data;
+  if (!msg || msg.jsonrpc !== "2.0") return;
+  if (msg.method === "ui/notifications/tool-result") {
+    const incoming = msg.params?.structuredContent?.tasks;
+    if (Array.isArray(incoming)) { tasks = incoming; render(); }
+  }
+  if (msg.id && pending.has(msg.id)) {
+    const p = pending.get(msg.id); pending.delete(msg.id);
+    if (msg.error) p.reject(msg.error); else p.resolve(msg.result);
+  }
+});
+
+function groups(filtered) {
+  return filtered.reduce((acc,t)=>((acc[t.category]??=[]).push(t),acc),{});
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+function render(){
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const visible = tasks.filter(t => (showDone || t.status !== "done") && t.title.toLowerCase().includes(q));
+  const by = groups(visible);
+  document.getElementById("openCount").textContent = tasks.filter(t=>t.status!=="done").length;
+  document.getElementById("doneCount").textContent = tasks.filter(t=>t.status==="done").length;
+  document.getElementById("categoryCount").textContent = new Set(tasks.map(t=>t.category)).size;
+  const root = document.getElementById("content");
+  const entries = Object.entries(by);
+  if (!entries.length){ root.innerHTML='<div class="empty">אין משימות להצגה</div>'; return; }
+  root.innerHTML = entries.map(([cat,items]) => `
+    <section class="category">
+      <div class="category-head"><h2>${esc(cat)}</h2><span class="count">${items.filter(t=>t.status==="done").length}/${items.length}</span></div>
+      ${items.map(t=>`
+        <div class="task">
+          <input class="check" type="checkbox" ${t.status==="done"?"checked":""} data-id="${esc(t.id)}">
+          <div class="task-main">
+            <div class="title ${t.status==="done"?"done":""}">${esc(t.title)}</div>
+            <div class="meta">
+              <span class="pill ${t.priority}">${t.priority==="high"?"גבוהה":t.priority==="medium"?"בינונית":"נמוכה"}</span>
+              ${t.status==="scheduled"?'<span class="pill">משובצת</span>':""}
+              ${t.dueDate?`<span class="pill">${esc(t.dueDate)}</span>`:""}
+            </div>
+          </div>
+          <div class="actions"><button class="icon defer" data-id="${esc(t.id)}">דחה</button></div>
+        </div>`).join("")}
+    </section>`).join("");
+
+  root.querySelectorAll(".check").forEach(el => el.addEventListener("change", async e => {
+    await callTool("set_task_status",{id:e.target.dataset.id,status:e.target.checked?"done":"open"});
+  }));
+  root.querySelectorAll(".defer").forEach(el => el.addEventListener("click", async e => {
+    await callTool("set_task_status",{id:e.target.dataset.id,status:"deferred"});
+  }));
+}
+document.getElementById("search").addEventListener("input",render);
+document.getElementById("showDone").addEventListener("click",()=>{
+  showDone=!showDone;
+  document.getElementById("showDone").textContent=showDone?"הסתר בוצעו":"הצג בוצעו";
+  render();
+});
+document.getElementById("addTask").addEventListener("click",async()=>{
+  const title=document.getElementById("newTask").value.trim();
+  if(!title)return;
+  const category=document.getElementById("newCategory").value;
+  document.getElementById("newTask").value="";
+  await callTool("create_task",{title,category,priority:"medium"});
+});
+render();
+</script>
+</body>
+</html>
