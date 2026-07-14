@@ -5,13 +5,13 @@ services:
     rootDir: avishai-day-manager-v0.2-ready
     region: frankfurt
     plan: free
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install --no-audit --no-fund && npm run build
     startCommand: npm start
     healthCheckPath: /health
     autoDeployTrigger: commit
     envVars:
       - key: NODE_VERSION
-        value: 22
+        value: 20
       - key: TASKS_FILE
         value: /tmp/tasks.json
       - key: APP_DOMAIN
