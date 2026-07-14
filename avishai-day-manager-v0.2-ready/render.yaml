@@ -2,8 +2,9 @@ services:
   - type: web
     name: avishai-day-manager
     runtime: node
+    rootDir: avishai-day-manager-v0.2-ready
     region: frankfurt
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /health
@@ -12,10 +13,6 @@ services:
       - key: NODE_VERSION
         value: 22
       - key: TASKS_FILE
-        value: /var/data/tasks.json
+        value: /tmp/tasks.json
       - key: APP_DOMAIN
         sync: false
-    disk:
-      name: task-data
-      mountPath: /var/data
-      sizeGB: 5
