@@ -1,0 +1,50 @@
+[
+  {
+    "id": "municipal-tax",
+    "title": "תשלום ארנונה",
+    "category": "בית ותשלומים",
+    "status": "open",
+    "priority": "high",
+    "dueDate": null
+  },
+  {
+    "id": "dog-food",
+    "title": "להזמין אוכל לכלבים",
+    "category": "כלבים",
+    "status": "open",
+    "priority": "medium",
+    "dueDate": null
+  },
+  {
+    "id": "dog-groomer",
+    "title": "לקבוע תור למספרה לכלבים",
+    "category": "כלבים",
+    "status": "open",
+    "priority": "medium",
+    "dueDate": null
+  },
+  {
+    "id": "vet-appointment",
+    "title": "לקבוע תור לוטרינר — תולעת הפארק",
+    "category": "כלבים",
+    "status": "open",
+    "priority": "high",
+    "dueDate": null
+  },
+  {
+    "id": "car-service",
+    "title": "לקבוע תור טיפול לרכב",
+    "category": "רכב",
+    "status": "open",
+    "priority": "medium",
+    "dueDate": null
+  },
+  {
+    "id": "doctor-results",
+    "title": "ללכת לרופא לבדוק תוצאות בדיקת זרע",
+    "category": "בריאות",
+    "status": "open",
+    "priority": "high",
+    "dueDate": null
+  }
+]

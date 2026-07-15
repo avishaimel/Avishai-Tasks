@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: avishai-day-manager
+    runtime: node
+    rootDir: avishai-day-manager-v0.2-ready
+    region: frankfurt
+    plan: free
+    buildCommand: npm ci --include=dev --registry=https://registry.npmjs.org/ --no-audit --no-fund && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 20.20.2
+      - key: TASKS_FILE
+        value: /tmp/tasks.json
